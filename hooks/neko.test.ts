@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { ASCII, MOUSE_AT, initial, rows, step } from './neko-logic.ts'
+import { ASCII, MOUSE_AT, PURR_TICKS, initial, rows, step } from './neko-logic.ts'
 import type { Neko, NekoProps } from './neko-logic.ts'
 
 const COLS = 80
@@ -138,5 +138,27 @@ describe('neko', () => {
     let s = run({ ...initial(idle), x: 20 }, { ...idle, pointer: 20 + (ASCII.cat >> 1), pointerSeq: 1 }, 5)
     s = run(s, { ...idle, pointer: null, pointerSeq: 1 }, 5)
     expect(s.goal).toBe(s.x)
+  })
+
+  test('a stroke makes it purr where it is, then it settles again', async () => {
+    const idle = { isWorking: false, col: 0, seq: 0 }
+    let s: Neko = { ...initial(idle), x: 20 }
+    s = step(s, { ...idle, strokeSeq: 1 }, COLS)
+    expect(s.pose).toBe('purr')
+    expect(rows(s).join('\n')).toContain('-.-')
+    s = run(s, { ...idle, strokeSeq: 1 }, PURR_TICKS - 1)
+    expect(s.pose).toBe('purr')
+    expect(s.x).toBe(20)
+    s = step(s, { ...idle, strokeSeq: 1 }, COLS)
+    expect(s.pose).toBe('sit')
+  })
+
+  test('stroking a sleeping cat skips the startle and shoos the mouse', async () => {
+    const idle = { isWorking: false, col: 0, seq: 0 }
+    let s = run(initial(idle), idle, MOUSE_AT)
+    expect(s.mouse).not.toBeNull()
+    s = step(s, { ...idle, strokeSeq: 1 }, COLS)
+    expect(s.pose).toBe('purr')
+    expect(s.mouse).toBeNull()
   })
 })

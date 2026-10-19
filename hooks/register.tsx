@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import type { Caret } from '../types'
-import type { BandProps } from './neko-client.ts'
+import type { BandMessage, BandProps } from './neko-client.ts'
 import { PIXEL, PIXEL_ROWS } from './pixel.ts'
 
 const caret = atom({ plugin: 'neko', key: 'caret' } as const, { col: 0, seq: 0 })
@@ -11,6 +11,8 @@ const isHidden = atom({ plugin: 'neko', key: 'isHidden' } as const, false)
 // The prompt box draws "> " before the draft.
 const PROMPT_PREFIX = 2
 const ASCII_ROWS = 3
+// The purr's length: strokes inside it keep the one playing rather than start another.
+const PURR_MS = 2400
 
 type Style = 'auto' | 'pixel' | 'ascii'
 
@@ -25,6 +27,7 @@ export const register: Register = (on, options) => {
   const cat = options.cat === 'black' ? 'black' : 'tabby'
   // Read on the first draw, so a reload or a session already running has it too.
   let hasTrueColor: boolean | undefined
+  let purredAt = Number.NEGATIVE_INFINITY
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -51,6 +54,21 @@ export const register: Register = (on, options) => {
 
   on('prompt.change', async ($, e, next) => {
     await update($, caret, c => caretOf(e.text, e.cursor, c.seq + 1))
+
+    return next(e)
+  })
+
+  // A stroke from the band: purr. Only macOS plays a plugin's sounds; elsewhere the
+  // engine skips it quietly and the cat purrs on screen alone.
+  on('ui.message', async ($, e, next) => {
+    const message = e.data as BandMessage | null
+    if (message?.purr === true) {
+      const now = await $.clock.now()
+      if (now - purredAt >= PURR_MS) {
+        purredAt = now
+        void $.audio.play({ asset: 'sounds/purr.wav' }, { gain: 0.8 }).catch(() => undefined)
+      }
+    }
 
     return next(e)
   })

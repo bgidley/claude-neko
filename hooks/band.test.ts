@@ -83,4 +83,38 @@ describe('the band above the prompt', () => {
     expect(ears.map(el => el.props.color)).toContain('#9a9aaa')
     await ascii.unmount()
   })
+
+  test('a press on the cat strokes it, and it purrs', { options: { style: 'ascii' } }, async ($, on) => {
+    mock.clock(on, { now: 1_000 })
+    const played: string[] = []
+    // Stands in for the speaker: notes the clip and answers as played.
+    on('audio.play', ($, e) => {
+      if ('asset' in e.clip && e.clip.asset !== undefined) played.push(e.clip.asset)
+      return { value: undefined }
+    })
+    const ui = await $.ui.mount({ plugin: 'neko', surface: 'terminal', component: 'AbovePrompt', props: props() })
+    await ui.resize({ in: 'neko', columns: 80, rows: 3 })
+    await ui.advance(100)
+    // The cat sits at the left edge: column 4 is its face.
+    await ui.pointer({ in: 'neko', type: 'down', x: 4, y: 1, button: 'left' })
+    await ui.pointer({ in: 'neko', type: 'move', x: 5, y: 1, button: 'left' })
+    await ui.pointer({ in: 'neko', type: 'up', x: 5, y: 1, button: 'left' })
+    await ui.advance(100)
+    expect(await ui.find({ type: 'Text', text: /-\.-/, in: 'neko' })).toBeDefined()
+    expect(played).toEqual(['sounds/purr.wav'])
+  })
+
+  test('a press away from the cat calls it over instead', { options: { style: 'ascii' } }, async ($, on) => {
+    mock.clock(on)
+    const ui = await $.ui.mount({ plugin: 'neko', surface: 'terminal', component: 'AbovePrompt', props: props() })
+    await ui.resize({ in: 'neko', columns: 80, rows: 3 })
+    await ui.advance(100)
+    await ui.pointer({ in: 'neko', type: 'down', x: 40, y: 1, button: 'left' })
+    await ui.pointer({ in: 'neko', type: 'up', x: 40, y: 1, button: 'left' })
+    await ui.advance(6000)
+    expect(await ui.find({ type: 'Text', text: /-\.-/, in: 'neko' })).toBeUndefined()
+    const ears = await ui.findAll({ type: 'Text', text: /\/\\_\/\\/, in: 'neko' })
+    const row = ears.map(el => el.text).find(text => text.trimStart().startsWith('/'))
+    expect(row?.indexOf('/\\_/\\')).toBe(40 - 4 + 2)
+  })
 })

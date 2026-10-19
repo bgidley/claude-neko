@@ -14,6 +14,7 @@ export const CATS: readonly CatName[] = ['tabby', 'black']
 const SHARED: Record<string, number> = {
   Y: 0xffdc50, // the startled "!"
   Z: 0xc8d2e6, // snores
+  H: 0xff6b8a, // the heart a stroked cat purrs
   M: 0xaab0b8, // mouse
   m: 0x6e747c, // mouse's feet and tail
 }
@@ -134,6 +135,25 @@ const CAUGHT = [
   ...BODY,
 ]
 
+// Purring: eyes shut (stripe-coloured lids suit every coat), a heart bobbing by an ear.
+const PURR_FACE = ['...ODDOOOOODDO..', '...OOOOOPOOOOO..', ...SIT.slice(6)]
+const PURR: [string[], string[]] = [
+  [
+    '...D.........D..',
+    'H.HDD.......DD..',
+    'HHHDODDDDDDDOD..',
+    '.H.OOOOOOOOOOO..',
+    ...PURR_FACE,
+  ],
+  [
+    'H.HD.........D..',
+    'HHHDD.......DD..',
+    '.H.DODDDDDDDOD..',
+    '...OOOOOOOOOOO..',
+    ...PURR_FACE,
+  ],
+]
+
 const RUN_HEAD = [
   '................',
   '................',
@@ -175,7 +195,7 @@ const MOUSE_RIGHT = flip(MOUSE_LEFT)
 
 /** Every sprite, for tests that hold them to their size. */
 export const SPRITES = {
-  cats: [SIT, ALERT, YAWN, ...SCRATCH, ...SLEEP, CAUGHT, ...RUN],
+  cats: [SIT, ALERT, YAWN, ...SCRATCH, ...SLEEP, CAUGHT, ...PURR, ...RUN],
   mice: [MOUSE_LEFT, MOUSE_RIGHT],
 }
 
@@ -194,6 +214,8 @@ function catSprite(s: Neko): string[] {
       return SLEEP[frame]
     case 'caught':
       return CAUGHT
+    case 'purr':
+      return PURR[frame]
     default:
       return SIT
   }

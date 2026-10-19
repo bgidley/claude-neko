@@ -11,6 +11,10 @@ An [xneko](https://en.wikipedia.org/wiki/Neko_(software))-style pixel-art cat fo
 - **Your mouse pointer hovers over the cat's band** - it runs to sit right under it,
   like the original xneko, dozes off if you leave it there, and startles awake when
   you move. Whichever you used last, keyboard or pointer, is the one it follows.
+- **You click (or tap) the cat** - you stroke it. It shuts its eyes, a heart bobs
+  up, and it purrs for a few seconds; drag across it while holding the button to
+  keep stroking. Click anywhere else in the band to call it over. The purr is
+  heard where Claude Code runs on macOS; elsewhere it purrs on screen only.
 - **Claude works** - it runs about the band and never sleeps.
 - **Nothing happens** - it sits, scratches, yawns, then falls asleep.
 - **Woken from a rest** - it startles, wide-eyed, before it runs, like the original.
@@ -74,7 +78,10 @@ then **Add plugin**.
 - `hooks/neko-client.ts` - a surface module that draws the band in either style,
   animates it on the terminal's own 100ms frame clock and hears the pointer.
 - `hooks/register.tsx` - the hooks module. It puts that band above the prompt,
-  picks the style, tracks the prompt's caret and registers `/neko`.
+  picks the style, tracks the prompt's caret, registers `/neko` and plays the purr
+  when the band reports a stroke.
+- `sounds/purr.wav` - the purr, synthesised: about 26 rumbling pulses a second
+  over an out-breath and an in-breath.
 
 The pointer is only seen while it is over the band: Claude Code hands a mod the
 pointer for its own region, not the rest of the screen.

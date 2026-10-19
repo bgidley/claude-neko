@@ -1,6 +1,7 @@
 /**
- * What the cat reacts to: is Claude busy, where the caret is, an edit counter, and
- * the pointer's column over the band (null when it is elsewhere) with a move counter.
+ * What the cat reacts to: is Claude busy, where the caret is, an edit counter, the
+ * pointer's column over the band (null when it is elsewhere) with a move counter,
+ * and a counter of strokes.
  */
 export type NekoProps = {
   isWorking: boolean
@@ -8,9 +9,10 @@ export type NekoProps = {
   seq: number
   pointer?: number | null
   pointerSeq?: number
+  strokeSeq?: number
 }
 
-export type Pose = 'run' | 'alert' | 'sit' | 'scratch' | 'yawn' | 'sleep' | 'caught'
+export type Pose = 'run' | 'alert' | 'sit' | 'scratch' | 'yawn' | 'sleep' | 'caught' | 'purr'
 
 export type Mouse = { x: number; dir: 1 | -1 }
 
@@ -31,9 +33,12 @@ export type Neko = {
   // Ticks with no typing and no work, and left to look pleased after a catch.
   idle: number
   fed: number
+  // Ticks left purring since the last stroke.
+  purr: number
   mouse: Mouse | null
   seq: number
   pointerSeq: number
+  strokeSeq: number
   seed: number
 }
 
@@ -50,6 +55,7 @@ const YAWN_AT = 60
 const SLEEP_AT = 80
 const FLEE_RANGE = 18 // the mouse runs once the cat is this close
 const FED_TICKS = 30
+export const PURR_TICKS = 30 // purr for 3s after the last stroke
 
 export function initial(props: NekoProps): Neko {
   return {
@@ -64,9 +70,11 @@ export function initial(props: NekoProps): Neko {
     alert: 0,
     idle: 0,
     fed: 0,
+    purr: 0,
     mouse: null,
     seq: props.seq,
     pointerSeq: props.pointerSeq ?? 0,
+    strokeSeq: props.strokeSeq ?? 0,
     seed: 1 + (props.seq % 9973),
   }
 }
@@ -107,6 +115,30 @@ export function step(s: Neko, p: NekoProps, columns: number, g: Geometry = ASCII
   const sinceTyped = typed ? 0 : s.sinceTyped + 1
   const pointerSeq = p.pointerSeq ?? 0
   const sincePointed = pointerSeq !== s.pointerSeq ? 0 : s.sincePointed + 1
+  const strokeSeq = p.strokeSeq ?? 0
+  const purr = strokeSeq !== s.strokeSeq ? PURR_TICKS : s.purr
+  if (purr > 0) {
+    // Being stroked it stays put, eyes closed, purring; even a sleeping cat skips the
+    // startle, and any mouse takes the chance to slip away.
+    return {
+      ...s,
+      x: clamp(s.x, 0, room),
+      pose: 'purr',
+      goal: clamp(s.x, 0, room),
+      tick: s.tick + 1,
+      still: 0,
+      sinceTyped,
+      sincePointed,
+      alert: 0,
+      idle: 0,
+      fed: 0,
+      purr: purr - 1,
+      mouse: null,
+      seq: p.seq,
+      pointerSeq,
+      strokeSeq,
+    }
+  }
   // Whichever moved last, the pointer or the caret, is the one to follow: the
   // pointer until the cat is under it, and for a while after it last moved.
   const pointer = p.pointer ?? null
@@ -209,16 +241,18 @@ export function step(s: Neko, p: NekoProps, columns: number, g: Geometry = ASCII
     alert,
     idle,
     fed,
+    purr: 0,
     mouse,
     seq: p.seq,
     pointerSeq,
+    strokeSeq,
     seed,
   }
 }
 
-/** Which of a pose's two frames shows: most flip every tick, the snoring every half second. */
+/** Which of a pose's two frames shows: most flip every tick, snores and purrs every half second. */
 export function frameOf(s: Neko): 0 | 1 {
-  const n = s.pose === 'sleep' ? Math.floor(s.tick / 5) : s.tick
+  const n = s.pose === 'sleep' || s.pose === 'purr' ? Math.floor(s.tick / 5) : s.tick
   return n % 2 === 0 ? 0 : 1
 }
 
@@ -243,6 +277,10 @@ const SLEEP: Pair = [
   ['  /\\_/\\  ', ' ( -.- )Z', '  (___)  '],
 ]
 const CAUGHT = ['  /\\_/\\  ', ' ( ^.^ ) ', '  > ^ <~ ']
+const PURR: Pair = [
+  ['  /\\_/\\ \u2665', ' ( -.- ) ', '  > ^ <  '],
+  ['  /\\_/\\  ', ' ( -.- )\u2665', '  > ^ <  '],
+]
 const MOUSE_LEFT = '<:3)~'
 const MOUSE_RIGHT = '~(E:>'
 
@@ -274,6 +312,8 @@ function asciiSprite(s: Neko): string[] {
       return pick(SLEEP, frame)
     case 'caught':
       return CAUGHT
+    case 'purr':
+      return pick(PURR, frame)
     default:
       return SIT
   }
