@@ -4,11 +4,9 @@ An [xneko](https://en.wikipedia.org/wiki/Neko_(software))-style ASCII cat for
 [Claude Code](https://claude.com/claude-code). It lives in a three-row band
 above the prompt:
 
-```
-  /\_/\        /\_/\ !        /\_/\ z
- ( o.o )      ( O.O )        ( -.- )
-  > ^ <        > ^ <          (___)
-```
+![neko following the caret, running about while Claude works, dozing off, then chasing and catching a mouse](docs/neko.gif)
+
+<sub>Frames rendered from the mod's own animation code; the long naps are sped up.</sub>
 
 - **You type** - the cat runs to your cursor and follows it.
 - **Claude works** - it runs about the band and never sleeps.
