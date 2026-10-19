@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "description": "An xneko-style ASCII cat above the prompt: chases your cursor, runs about while Claude works, naps when idle",
   "author": { "name": "bgidley" },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "types": "./types/index.d.ts"
 }
