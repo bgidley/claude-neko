@@ -1,7 +1,7 @@
 {
   "name": "neko",
-  "version": "0.4.0",
-  "description": "An xneko-style pixel-art cat above the prompt (tabby or black): chases your cursor, runs about while Claude works, naps when idle, hunts mice",
+  "version": "0.5.0",
+  "description": "An xneko-style pixel-art cat above the prompt (tabby or black): chases your cursor and mouse pointer, runs about while Claude works, naps when idle, hunts mice",
   "author": {
     "name": "bgidley"
   },

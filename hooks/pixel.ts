@@ -199,11 +199,6 @@ function catSprite(s: Neko): string[] {
   }
 }
 
-const UPPER_HALF = 0x2580
-const LOWER_HALF = 0x2584
-const SPACE = 0x20
-const DEFAULT_COLOR = 0x01000000
-
 /** The scene as one colour (or null, see-through) per pixel, row-major, `columns` wide. */
 export function pixels(s: Neko, columns: number, cat: CatName = 'tabby'): (number | null)[] {
   const palette = paletteOf(cat)
@@ -225,41 +220,38 @@ export function pixels(s: Neko, columns: number, cat: CatName = 'tabby'): (numbe
   return grid
 }
 
-/** The scene as a Raster's cells: one half-block per cell, its top and bottom pixel. */
-export function pixelCells(s: Neko, columns: number, cat: CatName = 'tabby'): string {
+/** A stretch of one row of half-blocks sharing a foreground and a background. */
+export type ColorRun = { text: string; fg?: string; bg?: string }
+
+const UPPER_HALF = '\u2580'
+const LOWER_HALF = '\u2584'
+
+function hex(color: number): string {
+  return `#${color.toString(16).padStart(6, '0')}`
+}
+
+/**
+ * The scene as rows of coloured half-blocks, two pixels to a cell: the top pixel is
+ * the glyph's colour and the bottom its background; see-through takes the terminal's.
+ */
+export function pixelRows(s: Neko, columns: number, cat: CatName = 'tabby'): ColorRun[][] {
   const grid = pixels(s, columns, cat)
-  const words = new Uint32Array(columns * PIXEL_ROWS * 3)
+  const rows: ColorRun[][] = []
   for (let r = 0; r < PIXEL_ROWS; r++) {
+    const runs: ColorRun[] = []
     for (let c = 0; c < columns; c++) {
       const top = grid[2 * r * columns + c] ?? null
       const bottom = grid[(2 * r + 1) * columns + c] ?? null
-      const at = (r * columns + c) * 3
-      if (top === null && bottom === null) {
-        words.set([SPACE, DEFAULT_COLOR, DEFAULT_COLOR], at)
-      } else if (top === null) {
-        words.set([LOWER_HALF, bottom ?? DEFAULT_COLOR, DEFAULT_COLOR], at)
-      } else {
-        words.set([UPPER_HALF, top, bottom ?? DEFAULT_COLOR], at)
-      }
+      let cell: ColorRun
+      if (top === null && bottom === null) cell = { text: ' ' }
+      else if (top === null) cell = { text: LOWER_HALF, fg: hex(bottom ?? 0) }
+      else if (bottom === null) cell = { text: UPPER_HALF, fg: hex(top) }
+      else cell = { text: UPPER_HALF, fg: hex(top), bg: hex(bottom) }
+      const last = runs[runs.length - 1]
+      if (last !== undefined && last.fg === cell.fg && last.bg === cell.bg) last.text += cell.text
+      else runs.push(cell)
     }
+    rows.push(runs)
   }
-  return toBase64(new Uint8Array(words.buffer))
-}
-
-const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-
-// Padded base64; written out so it runs wherever the hooks do.
-export function toBase64(bytes: Uint8Array): string {
-  let out = ''
-  for (let i = 0; i < bytes.length; i += 3) {
-    const a = bytes[i] ?? 0
-    const b = bytes[i + 1] ?? 0
-    const c = bytes[i + 2] ?? 0
-    const n = (a << 16) | (b << 8) | c
-    out += ALPHABET[(n >> 18) & 63]
-    out += ALPHABET[(n >> 12) & 63]
-    out += i + 1 < bytes.length ? ALPHABET[(n >> 6) & 63] : '='
-    out += i + 2 < bytes.length ? ALPHABET[n & 63] : '='
-  }
-  return out
+  return rows
 }

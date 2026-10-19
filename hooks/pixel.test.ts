@@ -2,15 +2,9 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { initial } from './neko-logic.ts'
 import type { Neko } from './neko-logic.ts'
-import { CATS, PIXEL, PIXEL_ROWS, SPRITES, paletteOf, pixelCells, pixels, toBase64 } from './pixel.ts'
+import { CATS, PIXEL, PIXEL_ROWS, SPRITES, paletteOf, pixelRows, pixels } from './pixel.ts'
 
 const idle = { isWorking: false, col: 0, seq: 0 }
-
-function decode(cells: string): number[] {
-  const bin = atob(cells)
-  const bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0))
-  return [...new Uint32Array(bytes.buffer)]
-}
 
 describe('pixel art', () => {
   test('every sprite is its geometry in size', async () => {
@@ -23,14 +17,17 @@ describe('pixel art', () => {
     }
   })
 
-  test('encodes one half-block cell per column and row', async () => {
+  test('draws two pixels to a cell, a row of half-blocks per band row', async () => {
     const s: Neko = { ...initial(idle), x: 4 }
-    const words = decode(pixelCells(s, 40))
-    expect(words.length).toBe(40 * PIXEL_ROWS * 3)
-    // Top-left is see-through: a blank in the terminal's own colours.
-    expect(words.slice(0, 3)).toEqual([0x20, 0x01000000, 0x01000000])
-    const glyphs = new Set(words.filter((_, i) => i % 3 === 0))
-    expect([...glyphs].sort()).toEqual([0x20, 0x2580, 0x2584])
+    const rows = pixelRows(s, 40)
+    expect(rows.length).toBe(PIXEL_ROWS)
+    for (const runs of rows) expect(runs.map(run => run.text).join('').length).toBe(40)
+    // See-through pixels take the terminal's own colours.
+    expect(rows[0]?.[0]).toEqual({ text: ' '.repeat(4 + 3) })
+    const glyphs = new Set(rows.flat().flatMap(run => [...run.text]))
+    expect([...glyphs].sort()).toEqual([' ', '\u2580', '\u2584'])
+    const colored = rows.flat().find(run => run.bg !== undefined)
+    expect(colored?.fg).toMatch(/^#[0-9a-f]{6}$/)
   })
 
   test('draws the cat over the mouse', async () => {
@@ -39,13 +36,6 @@ describe('pixel art', () => {
     const bottomRow = grid.slice(11 * 40, 12 * 40)
     // The cat's white paws at columns 13-14 win over the mouse beneath them.
     expect(bottomRow[13]).toBe(0xf5f0e6)
-  })
-
-  test('base64 matches the standard alphabet and padding', async () => {
-    for (const text of ['', 'f', 'fo', 'foo', 'neko!']) {
-      const bytes = Uint8Array.from(text, ch => ch.charCodeAt(0))
-      expect(toBase64(bytes)).toBe(btoa(text))
-    }
   })
 
   test('every cat has a colour for every letter the sprites use', async () => {

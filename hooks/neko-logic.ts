@@ -1,5 +1,14 @@
-/** What the cat reacts to: is Claude busy, where the caret is, an edit counter. */
-export type NekoProps = { isWorking: boolean; col: number; seq: number }
+/**
+ * What the cat reacts to: is Claude busy, where the caret is, an edit counter, and
+ * the pointer's column over the band (null when it is elsewhere) with a move counter.
+ */
+export type NekoProps = {
+  isWorking: boolean
+  col: number
+  seq: number
+  pointer?: number | null
+  pointerSeq?: number
+}
 
 export type Pose = 'run' | 'alert' | 'sit' | 'scratch' | 'yawn' | 'sleep' | 'caught'
 
@@ -14,22 +23,24 @@ export type Neko = {
   pose: Pose
   goal: number
   tick: number
-  // Ticks since the cat last moved, since the last keystroke, and left to stay startled.
+  // Ticks since the cat last moved, since the last keystroke and pointer move, and left to stay startled.
   still: number
   sinceTyped: number
+  sincePointed: number
   alert: number
   // Ticks with no typing and no work, and left to look pleased after a catch.
   idle: number
   fed: number
   mouse: Mouse | null
   seq: number
+  pointerSeq: number
   seed: number
 }
 
 export const TICK_MS = 100
 export const ASCII: Geometry = { cat: 9, mouse: 5 }
 export const MOUSE_AT = 300 // a mouse turns up after 30s with nothing happening
-const CHASE_TICKS = 40 // follow the caret for 4s after a keystroke
+const CHASE_TICKS = 40 // follow the caret or pointer for 4s after it last moved
 const STARTLE_AFTER = 10 // a cat resting this long startles before it runs
 const ALERT_TICKS = 3
 const ROAM_PAUSE = 8 // while Claude works, sit this long, then run somewhere new
@@ -49,11 +60,13 @@ export function initial(props: NekoProps): Neko {
     tick: 0,
     still: 0,
     sinceTyped: CHASE_TICKS,
+    sincePointed: CHASE_TICKS,
     alert: 0,
     idle: 0,
     fed: 0,
     mouse: null,
     seq: props.seq,
+    pointerSeq: props.pointerSeq ?? 0,
     seed: 1 + (props.seq % 9973),
   }
 }
@@ -92,8 +105,18 @@ export function step(s: Neko, p: NekoProps, columns: number, g: Geometry = ASCII
   const mouseRoom = Math.max(0, columns - g.mouse)
   const typed = p.seq !== s.seq
   const sinceTyped = typed ? 0 : s.sinceTyped + 1
-  const isFollowingCaret = sinceTyped < CHASE_TICKS
-  const isQuiet = !isFollowingCaret && !p.isWorking
+  const pointerSeq = p.pointerSeq ?? 0
+  const sincePointed = pointerSeq !== s.pointerSeq ? 0 : s.sincePointed + 1
+  // Whichever moved last, the pointer or the caret, is the one to follow: the
+  // pointer until the cat is under it, and for a while after it last moved.
+  const pointer = p.pointer ?? null
+  const underPointer = pointer === null ? s.x : clamp(pointer - (g.cat >> 1), 0, room)
+  const isFollowingPointer =
+    pointer !== null &&
+    sincePointed <= sinceTyped &&
+    (sincePointed < CHASE_TICKS || clamp(s.x, 0, room) !== underPointer)
+  const isFollowingCaret = sinceTyped < CHASE_TICKS && !isFollowingPointer
+  const isQuiet = !isFollowingCaret && !isFollowingPointer && !p.isWorking
   let { seed, goal, alert, still } = s
   const x = clamp(s.x, 0, room)
   let idle = isQuiet ? s.idle + 1 : 0
@@ -108,7 +131,10 @@ export function step(s: Neko, p: NekoProps, columns: number, g: Geometry = ASCII
     mouse = { x: fromRight ? mouseRoom : 0, dir: fromRight ? -1 : 1 }
   }
 
-  if (isFollowingCaret) {
+  if (isFollowingPointer) {
+    // Sit right under the pointer, as xneko does.
+    goal = underPointer
+  } else if (isFollowingCaret) {
     // Stand just behind the caret, facing it.
     const caret = columns > 0 ? p.col % columns : 0
     goal = clamp(caret - g.cat + 2, 0, room)
@@ -179,11 +205,13 @@ export function step(s: Neko, p: NekoProps, columns: number, g: Geometry = ASCII
     tick: s.tick + 1,
     still,
     sinceTyped,
+    sincePointed,
     alert,
     idle,
     fed,
     mouse,
     seq: p.seq,
+    pointerSeq,
     seed,
   }
 }

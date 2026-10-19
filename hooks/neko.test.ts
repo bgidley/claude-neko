@@ -113,4 +113,30 @@ describe('neko', () => {
       expect(s.pose).toBe('caught')
     }
   })
+
+  test('follows the pointer all the way, even after one move', async () => {
+    const idle = { isWorking: false, col: 0, seq: 0 }
+    const s = run(initial(idle), { ...idle, pointer: 75, pointerSeq: 1 }, 120)
+    expect(s.x).toBe(75 - (ASCII.cat >> 1))
+  })
+
+  test('follows whichever moved last, the pointer or the caret', async () => {
+    const idle = { isWorking: false, col: 10, seq: 0 }
+    let s = initial(idle)
+    s = run(s, { ...idle, pointer: 30, pointerSeq: 1 }, 60)
+    expect(s.x).toBe(30 - (ASCII.cat >> 1))
+    // A keystroke after it: back to just behind the caret at column 10.
+    s = run(s, { ...idle, seq: 1, pointer: 30, pointerSeq: 1 }, 35)
+    expect(s.x).toBe(10 - ASCII.cat + 2)
+    // A pointer move after that wins again.
+    s = run(s, { ...idle, seq: 1, pointer: 50, pointerSeq: 2 }, 60)
+    expect(s.x).toBe(50 - (ASCII.cat >> 1))
+  })
+
+  test('stops following once the pointer leaves the band', async () => {
+    const idle = { isWorking: false, col: 0, seq: 0 }
+    let s = run({ ...initial(idle), x: 20 }, { ...idle, pointer: 20 + (ASCII.cat >> 1), pointerSeq: 1 }, 5)
+    s = run(s, { ...idle, pointer: null, pointerSeq: 1 }, 5)
+    expect(s.goal).toBe(s.x)
+  })
 })

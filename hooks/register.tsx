@@ -1,20 +1,16 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { Register } from 'claude-code'
 
 import type { Caret } from '../types'
-import { TICK_MS, initial, step } from './neko-logic.ts'
-import type { Neko, NekoProps } from './neko-logic.ts'
-import { PIXEL, PIXEL_ROWS, pixelCells } from './pixel.ts'
-import type { CatName } from './pixel.ts'
+import type { BandProps } from './neko-client.ts'
+import { PIXEL, PIXEL_ROWS } from './pixel.ts'
 
 const caret = atom({ plugin: 'neko', key: 'caret' } as const, { col: 0, seq: 0 })
 const isHidden = atom({ plugin: 'neko', key: 'isHidden' } as const, false)
 
 // The prompt box draws "> " before the draft.
 const PROMPT_PREFIX = 2
-const KEY = 'neko'
-// Blits refused in a row before the timer stops trying until the next draw.
-const MAX_DENIED = 20
+const ASCII_ROWS = 3
 
 type Style = 'auto' | 'pixel' | 'ascii'
 
@@ -23,49 +19,18 @@ function caretOf(text: string, cursor: number, seq: number): Caret {
   return { col: PROMPT_PREFIX + before.length - (before.lastIndexOf('\n') + 1), seq }
 }
 
-// The pixel cat is animated here and painted with blits; the ASCII one animates itself.
-type Pixel = {
-  cat: CatName
-  neko: Neko
-  now: NekoProps
-  // Where the Raster is mounted, while it is.
-  site: { requestId: string; columns: number } | null
-  painted: string
-  denied: number
-}
-
-async function tick($: EngineInterface, px: Pixel): Promise<void> {
-  if (px.site === null) return
-  const { requestId, columns } = px.site
-  px.neko = step(px.neko, px.now, columns, PIXEL)
-  const cells = pixelCells(px.neko, columns, px.cat)
-  if (cells === px.painted) return
-  px.painted = cells
-  const { deny } = await $.ui.blit({ requestId, key: KEY, cells, columns, rows: PIXEL_ROWS })
-  px.denied = deny === undefined ? 0 : px.denied + 1
-  if (px.denied >= MAX_DENIED) px.site = null
-}
-
 export const register: Register = (on, options) => {
   const style: Style =
     options.style === 'pixel' || options.style === 'ascii' ? options.style : 'auto'
+  const cat = options.cat === 'black' ? 'black' : 'tabby'
   // Read on the first draw, so a reload or a session already running has it too.
   let hasTrueColor: boolean | undefined
-  const px: Pixel = {
-    cat: options.cat === 'black' ? 'black' : 'tabby',
-    neko: initial({ isWorking: false, col: 0, seq: 0 }),
-    now: { isWorking: false, col: 0, seq: 0 },
-    site: null,
-    painted: '',
-    denied: 0,
-  }
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'neko',
       description: 'Show or hide the cat above the prompt',
     })
-    $.clock.every(TICK_MS, () => void tick($, px))
 
     return next(e)
   })
@@ -91,42 +56,40 @@ export const register: Register = (on, options) => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    // Only the terminal and desktop tables carry Client; only the terminal's, Raster.
+    // Only the terminal and desktop tables carry Client.
     if (e.surface === 'mobile' || e.surface === 'vscode') {
       return next(e)
     }
     if (e.props.hasSurvey || (await read($, isHidden))) {
-      px.site = null
       return next(e)
     }
 
     const { col, seq } = await read($, caret)
-    px.now = { isWorking: e.props.isWorking, col, seq }
-    const columns = e.props.bodyColumns
-    const fits = e.props.maxRows >= PIXEL_ROWS && columns >= PIXEL.cat + PIXEL.mouse
+    const fits =
+      e.props.maxRows >= PIXEL_ROWS && e.props.bodyColumns >= PIXEL.cat + PIXEL.mouse
     if (style === 'auto' && hasTrueColor === undefined) {
       const colorterm = await $.env.get('COLORTERM').catch(() => undefined)
       hasTrueColor = /truecolor|24bit/i.test(colorterm ?? '')
     }
     const wantsPixel = style === 'pixel' || (style === 'auto' && hasTrueColor === true)
-
-    if (e.surface === 'terminal' && wantsPixel && fits) {
-      const { Raster } = $.ui.resolve(e)
-      px.site = { requestId: e.requestId, columns }
-      px.denied = 0
-      px.painted = pixelCells(px.neko, columns, px.cat)
-      return <Raster key={KEY} columns={columns} rows={PIXEL_ROWS} cells={px.painted} />
+    // Pixel art is half-blocks in the terminal's own cells; the desktop draws ASCII.
+    const isPixel = e.surface === 'terminal' && wantsPixel && fits
+    const band: BandProps = {
+      isWorking: e.props.isWorking,
+      col,
+      seq,
+      cat,
+      style: isPixel ? 'pixel' : 'ascii',
     }
 
-    px.site = null
     const { Client } = $.ui.resolve(e)
     return (
       <Client
-        key={KEY}
+        key="neko"
         module="./neko-client.ts"
-        props={{ ...px.now, cat: px.cat }}
+        props={band}
         width="100%"
-        height={3}
+        height={isPixel ? PIXEL_ROWS : ASCII_ROWS}
       />
     )
   })

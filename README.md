@@ -8,6 +8,9 @@ An [xneko](https://en.wikipedia.org/wiki/Neko_(software))-style pixel-art cat fo
 <sub>Frames rendered from the mod's own animation code; the long naps are sped up.</sub>
 
 - **You type** - the cat runs to your cursor and follows it.
+- **Your mouse pointer hovers over the cat's band** - it runs to sit right under it,
+  like the original xneko, dozes off if you leave it there, and startles awake when
+  you move. Whichever you used last, keyboard or pointer, is the one it follows.
 - **Claude works** - it runs about the band and never sleeps.
 - **Nothing happens** - it sits, scratches, yawns, then falls asleep.
 - **Woken from a rest** - it startles, wide-eyed, before it runs, like the original.
@@ -20,7 +23,7 @@ An [xneko](https://en.wikipedia.org/wiki/Neko_(software))-style pixel-art cat fo
 ## Pixel art or ASCII
 
 The cat is drawn as full-colour pixel art: two pixels to a terminal cell, using
-half-block characters. That needs a terminal with true colour (iTerm2, Ghostty,
+coloured half-block characters. That needs a terminal with true colour (iTerm2, Ghostty,
 kitty, WezTerm, Windows Terminal, VS Code, and most modern terminals) and takes a
 six-row band.
 
@@ -65,13 +68,16 @@ then **Add plugin**.
 ## How it works
 
 - `hooks/neko-logic.ts` - xneko's state machine (run, alert, sit, scratch, yawn,
-  sleep, caught) and the mouse, shared by both styles, plus the ASCII sprites.
-- `hooks/pixel.ts` - the pixel sprites and their encoding as `Raster` cells.
-- `hooks/register.tsx` - the hooks module. It draws the band above the prompt,
-  tracks the prompt's caret, registers `/neko`, and animates the pixel cat on a
-  100ms timer, repainting it with `$.ui.blit`.
-- `hooks/neko-client.ts` - the ASCII fallback, a surface module that animates
-  itself on the terminal's frame clock.
+  sleep, caught), what it follows (caret, pointer, Claude working) and the mouse,
+  shared by both styles, plus the ASCII sprites.
+- `hooks/pixel.ts` - the pixel sprites, each cat's palette, and the half-block rows.
+- `hooks/neko-client.ts` - a surface module that draws the band in either style,
+  animates it on the terminal's own 100ms frame clock and hears the pointer.
+- `hooks/register.tsx` - the hooks module. It puts that band above the prompt,
+  picks the style, tracks the prompt's caret and registers `/neko`.
+
+The pointer is only seen while it is over the band: Claude Code hands a mod the
+pointer for its own region, not the rest of the screen.
 
 ## Development
 

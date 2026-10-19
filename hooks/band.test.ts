@@ -17,9 +17,12 @@ describe('the band above the prompt', () => {
       component: 'AbovePrompt',
       props: props(),
     })
-    const raster = await ui.find({ type: 'Raster' })
-    expect(raster?.props.columns).toBe(80)
-    expect(raster?.props.rows).toBe(6)
+    const client = await ui.find({ type: 'Client' })
+    expect(client?.props.height).toBe(6)
+    await ui.resize({ in: 'neko', columns: 80, rows: 6 })
+    await ui.advance(100)
+    const blocks = await ui.findAll({ type: 'Text', text: /\u2580/, in: 'neko' })
+    expect(blocks.some(el => /^#[0-9a-f]{6}$/.test(String(el.props.color)))).toBe(true)
   })
 
   test('picks pixel art by itself where the terminal has true colour', async ($, on) => {
@@ -30,15 +33,31 @@ describe('the band above the prompt', () => {
       component: 'AbovePrompt',
       props: props(),
     })
-    expect(await ui.find({ type: 'Raster' })).toBeDefined()
+    expect((await ui.find({ type: 'Client' }))?.props.height).toBe(6)
+  })
+
+  test('follows the pointer over the band', { options: { style: 'ascii' } }, async $ => {
+    const ui = await $.ui.mount({
+      plugin: 'neko',
+      surface: 'terminal',
+      component: 'AbovePrompt',
+      props: props(),
+    })
+    await ui.resize({ in: 'neko', columns: 80, rows: 3 })
+    await ui.advance(100)
+    await ui.pointer({ in: 'neko', type: 'move', x: 60, y: 1 })
+    await ui.advance(8000)
+    // The ASCII cat is 9 columns wide, its ears 2 in: centred on column 60.
+    const ears = await ui.findAll({ type: 'Text', text: /\/\\_\/\\/, in: 'neko' })
+    const row = ears.map(el => el.text).find(text => text.trimStart().startsWith('/'))
+    expect(row?.indexOf('/\\_/\\')).toBe(60 - 4 + 2)
   })
 
   test('falls back to coloured ASCII without true colour', async ($, on) => {
     mock.env(on, {})
     for (const surface of ['terminal', 'desktop'] as const) {
       const ui = await $.ui.mount({ plugin: 'neko', surface, component: 'AbovePrompt', props: props() })
-      expect(await ui.find({ type: 'Raster' })).toBeUndefined()
-      expect(await ui.find({ type: 'Client' })).toBeDefined()
+      expect((await ui.find({ type: 'Client' }))?.props.height).toBe(3)
       await ui.advance(100)
       const ears = await ui.findAll({ type: 'Text', text: /\/\\_\/\\/, in: 'neko' })
       expect(ears.map(el => el.props.color)).toContain('#f0a35e')
@@ -53,7 +72,7 @@ describe('the band above the prompt', () => {
       component: 'AbovePrompt',
       props: props({ maxRows: 4 }),
     })
-    expect(await ui.find({ type: 'Client' })).toBeDefined()
+    expect((await ui.find({ type: 'Client' }))?.props.height).toBe(3)
   })
 
   test('draws the black cat in ASCII too', { options: { cat: 'black' } }, async ($, on) => {
