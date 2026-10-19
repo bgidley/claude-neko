@@ -1,0 +1,6 @@
+{
+  "name": "claude-neko",
+  "description": "An xneko-style ASCII cat for Claude Code",
+  "owner": { "name": "bgidley" },
+  "plugins": [{ "name": "neko", "source": "./" }]
+}
