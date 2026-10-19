@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { CAT_WIDTH, MOUSE_AT, initial, rows, step } from './neko-client.ts'
-import type { Neko, NekoProps } from './neko-client.ts'
+import { ASCII, MOUSE_AT, initial, rows, step } from './neko-logic.ts'
+import type { Neko, NekoProps } from './neko-logic.ts'
 
 const COLS = 80
 
@@ -15,7 +15,7 @@ describe('neko', () => {
     const idle = { isWorking: false, col: 0, seq: 0 }
     let s = initial(idle)
     s = run(s, { ...idle, col: 40, seq: 1 }, 60)
-    expect(s.x).toBe(40 - CAT_WIDTH + 2)
+    expect(s.x).toBe(40 - ASCII.cat + 2)
     expect(s.pose).not.toBe('run')
   })
 
@@ -47,7 +47,7 @@ describe('neko', () => {
       s = step(s, busy, COLS)
       seen.add(s.x)
       expect(s.pose).not.toBe('sleep')
-      expect(s.x).toBeLessThanOrEqual(COLS - CAT_WIDTH)
+      expect(s.x).toBeLessThanOrEqual(COLS - ASCII.cat)
     }
     expect(seen.size).toBeGreaterThan(10)
   })
@@ -102,5 +102,15 @@ describe('neko', () => {
     const busy = { isWorking: true, col: 0, seq: 0 }
     const s = run(initial(busy), busy, MOUSE_AT * 2)
     expect(s.mouse).toBeNull()
+  })
+
+  test('a wide pixel cat catches the mouse at either wall', async () => {
+    const idle = { isWorking: false, col: 0, seq: 0 }
+    const wide = { cat: 16, mouse: 8 }
+    for (const startX of [0, COLS - wide.cat]) {
+      let s: Neko = { ...initial(idle), x: startX }
+      for (let i = 0; i < MOUSE_AT + 200 && s.pose !== 'caught'; i++) s = step(s, idle, COLS, wide)
+      expect(s.pose).toBe('caught')
+    }
   })
 })

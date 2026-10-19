@@ -1,8 +1,23 @@
 {
   "name": "neko",
-  "version": "0.2.0",
-  "description": "An xneko-style ASCII cat above the prompt: chases your cursor, runs about while Claude works, naps when idle",
-  "author": { "name": "bgidley" },
+  "version": "0.3.0",
+  "description": "An xneko-style pixel-art cat above the prompt: chases your cursor, runs about while Claude works, naps when idle, hunts mice",
+  "author": {
+    "name": "bgidley"
+  },
   "license": "Apache-2.0",
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "style": {
+      "type": "string",
+      "title": "Style",
+      "description": "pixel: colour pixel art; ascii: coloured ASCII; auto: pixel art where the terminal has true colour",
+      "default": "auto",
+      "options": [
+        "auto",
+        "pixel",
+        "ascii"
+      ]
+    }
+  }
 }
