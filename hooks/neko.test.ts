@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { CAT_WIDTH, initial, rows, step } from './neko-client.ts'
+import { CAT_WIDTH, MOUSE_AT, initial, rows, step } from './neko-client.ts'
 import type { Neko, NekoProps } from './neko-client.ts'
 
 const COLS = 80
@@ -60,5 +60,47 @@ describe('neko', () => {
     expect(s.pose).toBe('run')
     expect(s.dir).toBe(-1)
     expect(rows(s)[1]).toContain('(o.o )~')
+  })
+
+  test('a mouse turns up after a long quiet spell, and the cat catches it', async () => {
+    const idle = { isWorking: false, col: 0, seq: 0 }
+    let s = run(initial(idle), idle, MOUSE_AT - 1)
+    expect(s.mouse).toBeNull()
+    s = step(s, idle, COLS)
+    expect(s.mouse).not.toBeNull()
+    expect(rows(s)[2]).toContain('<:3)~')
+
+    const poses = new Set<string>()
+    for (let i = 0; i < 200 && s.mouse !== null; i++) {
+      s = step(s, idle, COLS)
+      poses.add(s.pose)
+    }
+    expect(s.mouse).toBeNull()
+    expect(poses.has('alert')).toBe(true)
+    expect(poses.has('run')).toBe(true)
+    expect(s.pose).toBe('caught')
+    expect(rows(s)[1]).toContain('^.^')
+  })
+
+  test('the mouse runs from the cat once it is close', async () => {
+    const idle = { isWorking: false, col: 0, seq: 0 }
+    const near: Neko = { ...run(initial(idle), idle, 5), x: 30, idle: MOUSE_AT, mouse: { x: 40, dir: -1 } }
+    const s = step(near, idle, COLS)
+    expect(s.mouse).toEqual({ x: 41, dir: 1 })
+    expect(rows(s)[2]).toContain('~(E:>')
+  })
+
+  test('typing scares the mouse off', async () => {
+    const idle = { isWorking: false, col: 0, seq: 0 }
+    let s = run(initial(idle), idle, MOUSE_AT + 5)
+    expect(s.mouse).not.toBeNull()
+    s = step(s, { ...idle, col: 20, seq: 1 }, COLS)
+    expect(s.mouse).toBeNull()
+  })
+
+  test('no mouse while Claude works', async () => {
+    const busy = { isWorking: true, col: 0, seq: 0 }
+    const s = run(initial(busy), busy, MOUSE_AT * 2)
+    expect(s.mouse).toBeNull()
   })
 })

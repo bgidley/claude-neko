@@ -14,6 +14,9 @@ above the prompt:
 - **Claude works** - it runs about the band and never sleeps.
 - **Nothing happens** - it sits, scratches, yawns, then falls asleep.
 - **Woken from a rest** - it startles (`O.O !`) before it runs, like the original.
+- **Quiet for 30 seconds** - a mouse (`<:3)~`) creeps in. The cat wakes, gives
+  chase, corners it and looks very pleased with itself (`^.^`). Typing or
+  Claude starting work scares the mouse off.
 
 `/neko` hides or shows it.
 
@@ -44,7 +47,7 @@ then **Add plugin**.
   `prompt.edit` / `prompt.change`, and registers `/neko`.
 - `hooks/neko-client.ts` - a surface module that runs the animation on the
   terminal's own 100ms frame clock: sprites plus xneko's state machine
-  (run, alert, sit, scratch, yawn, sleep).
+  (run, alert, sit, scratch, yawn, sleep, caught) and the mouse.
 
 ## Development
 
