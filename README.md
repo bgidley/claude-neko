@@ -32,6 +32,16 @@ on the desktop app, it falls back to a coloured ASCII cat in three rows:
 Pick one in `/config` under the plugin's **Style** option: `auto` (the default:
 pixel art where `COLORTERM` says `truecolor` or `24bit`), `pixel` or `ascii`.
 
+## Pick a cat
+
+Two cats so far, set in `/config` under the plugin's **Cat** option:
+
+- `tabby` (the default) - orange, green-eyed, white paws.
+- `black` - charcoal with yellow eyes. Its ears and stripes are a lighter sheen, so it
+  still shows on a dark terminal.
+
+![the black cat's poses](docs/black-cat.png)
+
 ## Install
 
 At the prompt of a Claude Code terminal session:

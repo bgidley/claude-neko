@@ -6,17 +6,43 @@ export const PIXEL: Geometry = { cat: 16, mouse: 8 }
 export const PIXEL_ROWS = 6
 const HEIGHT = PIXEL_ROWS * 2
 
-const PALETTE: Record<string, number> = {
-  O: 0xf0a35e, // fur
-  D: 0xc47030, // stripes and ears
-  W: 0xf5f0e6, // muzzle and paws
-  K: 0x1e1e1e, // pupils and mouth
-  G: 0x78c878, // eyes
-  P: 0xf08ca0, // nose
+/** The cats to pick from. */
+export type CatName = 'tabby' | 'black'
+export const CATS: readonly CatName[] = ['tabby', 'black']
+
+// What every cat shares: the mouse, the snores and the startled "!".
+const SHARED: Record<string, number> = {
   Y: 0xffdc50, // the startled "!"
   Z: 0xc8d2e6, // snores
   M: 0xaab0b8, // mouse
   m: 0x6e747c, // mouse's feet and tail
+}
+
+// Each cat's coat. The black cat is charcoal rather than black, so it shows on a dark terminal.
+const COATS: Record<CatName, Record<string, number>> = {
+  tabby: {
+    O: 0xf0a35e, // fur
+    D: 0xc47030, // stripes and ears
+    W: 0xf5f0e6, // muzzle and paws
+    K: 0x1e1e1e, // pupils and mouth
+    E: 0x1e1e1e, // wide and happy eyes
+    G: 0x78c878, // eyes
+    P: 0xf08ca0, // nose
+  },
+  black: {
+    O: 0x3a3a44,
+    D: 0x5a5a6c, // a sheen, not a shadow: darker ears would vanish on a dark terminal
+    W: 0x5e5e6c,
+    K: 0x0c0c10,
+    E: 0xf2d24a,
+    G: 0xf2d24a,
+    P: 0xf08ca0,
+  },
+}
+
+/** Every colour key a sprite may use, for each cat. */
+export function paletteOf(cat: CatName): Record<string, number> {
+  return { ...SHARED, ...COATS[cat] }
 }
 
 // Each sprite is rows of palette letters; '.' is see-through.
@@ -41,8 +67,8 @@ const ALERT = [
   '...DD.......DD.Y',
   '...DODDDDDDDOD.Y',
   '...OOOOOOOOOOO..',
-  '...OKKOOOOOKKO.Y',
-  '...OKKOOPOOKKO..',
+  '...OEEOOOOOEEO.Y',
+  '...OEEOOPOOEEO..',
   ...SIT.slice(6),
 ]
 
@@ -100,8 +126,8 @@ const SLEEP: [string[], string[]] = [
 
 const CAUGHT = [
   ...SIT.slice(0, 3),
-  '...OOKOOOOOKOO..',
-  '...OKOKOOOKOKO..',
+  '...OOEOOOOOEOO..',
+  '...OEOEOOOEOEO..',
   '...OOOOOPOOOOO..',
   '....OOWWWWWOOMM.',
   '.....OOOOOOO.M..',
@@ -179,13 +205,14 @@ const SPACE = 0x20
 const DEFAULT_COLOR = 0x01000000
 
 /** The scene as one colour (or null, see-through) per pixel, row-major, `columns` wide. */
-export function pixels(s: Neko, columns: number): (number | null)[] {
+export function pixels(s: Neko, columns: number, cat: CatName = 'tabby'): (number | null)[] {
+  const palette = paletteOf(cat)
   const grid: (number | null)[] = new Array(columns * HEIGHT).fill(null)
   const paint = (sprite: string[], x0: number, y0: number) => {
     sprite.forEach((row, r) => {
       ;[...row].forEach((key, c) => {
         const x = x0 + c
-        const color = PALETTE[key]
+        const color = palette[key]
         if (color !== undefined && x >= 0 && x < columns) grid[(y0 + r) * columns + x] = color
       })
     })
@@ -199,8 +226,8 @@ export function pixels(s: Neko, columns: number): (number | null)[] {
 }
 
 /** The scene as a Raster's cells: one half-block per cell, its top and bottom pixel. */
-export function pixelCells(s: Neko, columns: number): string {
-  const grid = pixels(s, columns)
+export function pixelCells(s: Neko, columns: number, cat: CatName = 'tabby'): string {
+  const grid = pixels(s, columns, cat)
   const words = new Uint32Array(columns * PIXEL_ROWS * 3)
   for (let r = 0; r < PIXEL_ROWS; r++) {
     for (let c = 0; c < columns; c++) {

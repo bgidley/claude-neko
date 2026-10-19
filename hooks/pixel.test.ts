@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { initial } from './neko-logic.ts'
 import type { Neko } from './neko-logic.ts'
-import { PIXEL, PIXEL_ROWS, SPRITES, pixelCells, pixels, toBase64 } from './pixel.ts'
+import { CATS, PIXEL, PIXEL_ROWS, SPRITES, paletteOf, pixelCells, pixels, toBase64 } from './pixel.ts'
 
 const idle = { isWorking: false, col: 0, seq: 0 }
 
@@ -46,5 +46,22 @@ describe('pixel art', () => {
       const bytes = Uint8Array.from(text, ch => ch.charCodeAt(0))
       expect(toBase64(bytes)).toBe(btoa(text))
     }
+  })
+
+  test('every cat has a colour for every letter the sprites use', async () => {
+    const letters = new Set([...SPRITES.cats, ...SPRITES.mice].flat().join('').replaceAll('.', ''))
+    for (const cat of CATS) {
+      const palette = paletteOf(cat)
+      for (const letter of letters) expect(palette[letter]).toBeDefined()
+    }
+  })
+
+  test('the black cat wears its own coat', async () => {
+    const s: Neko = { ...initial(idle), x: 0 }
+    const tabby = new Set(pixels(s, 20, 'tabby'))
+    const black = new Set(pixels(s, 20, 'black'))
+    expect(tabby.has(0xf0a35e)).toBe(true)
+    expect(black.has(0xf0a35e)).toBe(false)
+    expect(black.has(0x3a3a44)).toBe(true)
   })
 })

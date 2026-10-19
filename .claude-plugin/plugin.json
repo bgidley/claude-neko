@@ -1,7 +1,7 @@
 {
   "name": "neko",
-  "version": "0.3.0",
-  "description": "An xneko-style pixel-art cat above the prompt: chases your cursor, runs about while Claude works, naps when idle, hunts mice",
+  "version": "0.4.0",
+  "description": "An xneko-style pixel-art cat above the prompt (tabby or black): chases your cursor, runs about while Claude works, naps when idle, hunts mice",
   "author": {
     "name": "bgidley"
   },
@@ -17,6 +17,16 @@
         "auto",
         "pixel",
         "ascii"
+      ]
+    },
+    "cat": {
+      "type": "string",
+      "title": "Cat",
+      "description": "Which cat: tabby or black",
+      "default": "tabby",
+      "options": [
+        "tabby",
+        "black"
       ]
     }
   }

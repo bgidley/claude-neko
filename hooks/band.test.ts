@@ -55,4 +55,13 @@ describe('the band above the prompt', () => {
     })
     expect(await ui.find({ type: 'Client' })).toBeDefined()
   })
+
+  test('draws the black cat in ASCII too', { options: { cat: 'black' } }, async ($, on) => {
+    mock.env(on, {})
+    const ascii = await $.ui.mount({ plugin: 'neko', surface: 'terminal', component: 'AbovePrompt', props: props() })
+    await ascii.advance(100)
+    const ears = await ascii.findAll({ type: 'Text', text: /\/\\_\/\\/, in: 'neko' })
+    expect(ears.map(el => el.props.color)).toContain('#9a9aaa')
+    await ascii.unmount()
+  })
 })

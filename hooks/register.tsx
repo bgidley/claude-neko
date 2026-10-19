@@ -5,6 +5,7 @@ import type { Caret } from '../types'
 import { TICK_MS, initial, step } from './neko-logic.ts'
 import type { Neko, NekoProps } from './neko-logic.ts'
 import { PIXEL, PIXEL_ROWS, pixelCells } from './pixel.ts'
+import type { CatName } from './pixel.ts'
 
 const caret = atom({ plugin: 'neko', key: 'caret' } as const, { col: 0, seq: 0 })
 const isHidden = atom({ plugin: 'neko', key: 'isHidden' } as const, false)
@@ -24,6 +25,7 @@ function caretOf(text: string, cursor: number, seq: number): Caret {
 
 // The pixel cat is animated here and painted with blits; the ASCII one animates itself.
 type Pixel = {
+  cat: CatName
   neko: Neko
   now: NekoProps
   // Where the Raster is mounted, while it is.
@@ -36,7 +38,7 @@ async function tick($: EngineInterface, px: Pixel): Promise<void> {
   if (px.site === null) return
   const { requestId, columns } = px.site
   px.neko = step(px.neko, px.now, columns, PIXEL)
-  const cells = pixelCells(px.neko, columns)
+  const cells = pixelCells(px.neko, columns, px.cat)
   if (cells === px.painted) return
   px.painted = cells
   const { deny } = await $.ui.blit({ requestId, key: KEY, cells, columns, rows: PIXEL_ROWS })
@@ -50,6 +52,7 @@ export const register: Register = (on, options) => {
   // Read on the first draw, so a reload or a session already running has it too.
   let hasTrueColor: boolean | undefined
   const px: Pixel = {
+    cat: options.cat === 'black' ? 'black' : 'tabby',
     neko: initial({ isWorking: false, col: 0, seq: 0 }),
     now: { isWorking: false, col: 0, seq: 0 },
     site: null,
@@ -111,7 +114,7 @@ export const register: Register = (on, options) => {
       const { Raster } = $.ui.resolve(e)
       px.site = { requestId: e.requestId, columns }
       px.denied = 0
-      px.painted = pixelCells(px.neko, columns)
+      px.painted = pixelCells(px.neko, columns, px.cat)
       return <Raster key={KEY} columns={columns} rows={PIXEL_ROWS} cells={px.painted} />
     }
 
@@ -121,7 +124,7 @@ export const register: Register = (on, options) => {
       <Client
         key={KEY}
         module="./neko-client.ts"
-        props={px.now}
+        props={{ ...px.now, cat: px.cat }}
         width="100%"
         height={3}
       />
