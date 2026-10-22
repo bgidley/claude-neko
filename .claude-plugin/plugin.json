@@ -1,7 +1,7 @@
 {
   "name": "neko",
-  "version": "0.6.0",
-  "description": "An xneko-style pixel-art cat above the prompt (tabby or black): chases your cursor and mouse pointer, purrs when you stroke it, runs about while Claude works, naps when idle, hunts mice",
+  "version": "0.7.0",
+  "description": "An xneko-style pixel-art cat (tabby or black): up on the ceiling of the fullscreen transcript it chases the conversation as it scrolls and bats Claude's words about; in its band above the prompt it chases your cursor and pointer, purrs when stroked, naps and hunts mice",
   "author": {
     "name": "bgidley"
   },
@@ -22,11 +22,11 @@
     "place": {
       "type": "string",
       "title": "Place",
-      "description": "band: in its own band above the prompt; overlay: over the bottom of the transcript, Claude's output scrolling in under it (fullscreen only, the band elsewhere)",
-      "default": "band",
+      "description": "ceiling: up in the top third of the fullscreen transcript, over the conversation, chasing it as it scrolls and batting words about (the band elsewhere); band: in its own band above the prompt",
+      "default": "ceiling",
       "options": [
-        "band",
-        "overlay"
+        "ceiling",
+        "band"
       ]
     },
     "cat": {
