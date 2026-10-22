@@ -1,16 +1,12 @@
 import type { ClientModule } from 'claude-code'
 
-import { ASCII, TICK_MS, asciiRows, initial, step } from './neko-logic.ts'
+import { ASCII, CAT_COLORS, MOUSE_COLOR, TICK_MS, asciiRows, initial, step } from './neko-logic.ts'
 import type { Neko, NekoProps } from './neko-logic.ts'
 import { PIXEL, pixelRows } from './pixel.ts'
 import type { CatName } from './pixel.ts'
 
 /** What the hooks module hands the band: the cat's world, which cat, and how to draw it. */
 export type BandProps = NekoProps & { cat: CatName; style: 'pixel' | 'ascii' }
-
-// The ASCII cat's colours. The black cat is drawn light grey, so it shows on a dark terminal.
-const CAT_COLORS: Record<CatName, string> = { tabby: '#f0a35e', black: '#9a9aaa' }
-const MOUSE_COLOR = '#aab0b8'
 
 // The newest props, pointer and strokes, read by the tick: a redraw hands props in
 // without restarting the clock, and the pointer moves between ticks.
