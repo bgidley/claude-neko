@@ -44,6 +44,9 @@ export type Neko = {
 
 export const TICK_MS = 100
 export const ASCII: Geometry = { cat: 9, mouse: 5 }
+// The ASCII cat's colours. The black cat is drawn light grey, so it shows on a dark terminal.
+export const CAT_COLORS: Record<'tabby' | 'black', string> = { tabby: '#f0a35e', black: '#9a9aaa' }
+export const MOUSE_COLOR = '#aab0b8'
 export const MOUSE_AT = 300 // a mouse turns up after 30s with nothing happening
 const CHASE_TICKS = 40 // follow the caret or pointer for 4s after it last moved
 const STARTLE_AFTER = 10 // a cat resting this long startles before it runs

@@ -19,6 +19,16 @@
         "ascii"
       ]
     },
+    "place": {
+      "type": "string",
+      "title": "Place",
+      "description": "band: in its own band above the prompt; overlay: over the bottom of the transcript, Claude's output scrolling in under it (fullscreen only, the band elsewhere)",
+      "default": "band",
+      "options": [
+        "band",
+        "overlay"
+      ]
+    },
     "cat": {
       "type": "string",
       "title": "Cat",
