@@ -24,6 +24,27 @@ An [xneko](https://en.wikipedia.org/wiki/Neko_(software))-style pixel-art cat fo
 
 `/neko` hides or shows it.
 
+## Ceiling cat
+
+In the fullscreen terminal (`"tui": "fullscreen"`) the cat leaves the band and goes
+up on the ceiling: the top third of the conversation, drawn over it, with the text
+showing through around it.
+
+- **It appears in the top right corner** and wanders the top third while Claude works.
+- **The conversation scrolls** (new output, or you scrolling) - it chases the text
+  as it moves.
+- **The scrolling stops** - it hunts down a word Claude just wrote, pounces, and
+  bats it about the top third until it tires of it and naps. Scrolling again makes
+  it drop the word.
+- **You interrupt Claude** - it stops where it is until the next turn.
+
+While a reply is streaming in, Claude Code draws that text itself and lets no mod
+draw over it, so the cat ducks out of sight until the reply lands. Up there it
+can't be stroked: the pointer only reaches the cat in the band.
+
+Set `/config`'s **Place** option to `band` to keep the cat in the band even in
+fullscreen. Outside fullscreen it always lives in the band.
+
 ## Pixel art or ASCII
 
 The cat is drawn as full-colour pixel art: two pixels to a terminal cell, using
@@ -77,9 +98,16 @@ then **Add plugin**.
 - `hooks/pixel.ts` - the pixel sprites, each cat's palette, and the half-block rows.
 - `hooks/neko-client.ts` - a surface module that draws the band in either style,
   animates it on the terminal's own 100ms frame clock and hears the pointer.
+- `hooks/ceiling.ts` - the ceiling cat: wandering the top third in two dimensions,
+  chasing the scroll, hunting a word and knocking it about, stopping when
+  interrupted; and where a reply's words fall on screen.
+- `hooks/overlay.ts` - a scene as rows that leave the empty cells undrawn, so the
+  conversation shows through around the ceiling cat.
 - `hooks/register.tsx` - the hooks module. It puts that band above the prompt,
   picks the style, tracks the prompt's caret, registers `/neko` and plays the purr
-  when the band reports a stroke.
+  when the band reports a stroke. In fullscreen it draws the ceiling cat from
+  whichever transcript row is at the top of the screen, measures the scroll from
+  that row, and steps the cat on a 100ms clock.
 - `sounds/purr.wav` - the purr, synthesised: about 26 rumbling pulses a second
   over an out-breath and an in-breath.
 
