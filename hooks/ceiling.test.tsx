@@ -141,6 +141,29 @@ describe('the ceiling cat over the transcript', () => {
     expect(blanks.length).toBe(0)
   })
 
+  test('draws from the lowest row on screen, so nothing paints over it', async ($, on) => {
+    mock.env(on, { COLORTERM: 'truecolor' })
+    engineDraws(on)
+    // The top row: 20 rows, its first five scrolled away, so 15 show.
+    await $.ui.mount({
+      plugin: 'neko',
+      surface: 'terminal',
+      component: 'AssistantMessage',
+      props: { ...reply(5), onScreen: { first: 5, last: 19, of: 20 } },
+      viewport: fullscreen,
+    })
+    const below = await $.ui.mount({
+      plugin: 'neko',
+      surface: 'terminal',
+      component: 'AssistantMessage',
+      props: { ...reply(0), onScreen: { first: 0, last: 9, of: 10 } },
+      viewport: fullscreen,
+    })
+    // Its top is 15 rows down the screen: the cat is drawn that far up from it.
+    const placed = (await below.findAll({ type: 'Box' })).filter(el => el.props.position === 'absolute')
+    expect(placed.map(el => [el.props.left, el.props.top])).toEqual([[83, -15]])
+  })
+
   test('leaves the band empty in fullscreen', async ($, on) => {
     mock.env(on, { COLORTERM: 'truecolor' })
     engineDraws(on)
