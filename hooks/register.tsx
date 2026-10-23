@@ -16,6 +16,8 @@ const isHidden = atom({ plugin: 'neko', key: 'isHidden' } as const, false)
 const frame = atom({ plugin: 'neko', key: 'frame' } as const, 0)
 // The transcript row the ceiling cat is drawn from, which every row reads: written
 // when it changes, it redraws the last one without the cat and the new one with it.
+// It is the lowest row on screen, as the rows are painted top down: drawn from any
+// row above, the rows below it would paint over the cat.
 const topRowAtom = atom({ plugin: 'neko', key: 'topRow' } as const, '')
 
 // The prompt box draws "> " before the draft.
@@ -26,13 +28,12 @@ const PURR_MS = 2400
 // The word the cat plays with.
 const TOY_COLOR = '#ffd75f'
 
-// The transcript's rows that say which of their lines are on screen: the ceiling cat
-// is drawn from whichever is at the top of the viewport.
+// The transcript's rows that say which of their lines are on screen. A tool's
+// result is drawn inside its ToolUse row, so it is not one of them.
 const TRANSCRIPT = [
   'UserMessage',
   'AssistantMessage',
   'ToolUse',
-  'ToolResult',
   'ToolGroup',
   'CommandOutput',
   'TurnDuration',
@@ -42,8 +43,8 @@ const TRANSCRIPT = [
 type Style = 'auto' | 'pixel' | 'ascii'
 type Place = 'band' | 'ceiling'
 // A transcript row on screen: in what order it was first drawn, its first row on
-// screen, and its text for a reply.
-type Shown = { order: number; first: number; reply?: string }
+// screen, how many rows it has, and its text for a reply.
+type Shown = { order: number; first: number; of: number; reply?: string }
 
 function caretOf(text: string, cursor: number, seq: number): Caret {
   const before = text.slice(0, cursor)
@@ -74,6 +75,9 @@ export const register: Register = (on, options) => {
   const shown = new Map<string, Shown>()
   let order = 0
   let anchor: string | undefined
+  // The row the cat is drawn from, and which of its rows is the top of the screen.
+  let painter: string | undefined
+  let lift = 0
   let scrolled = 0
   let ceiling: Ceiling | undefined
   let looks = ''
@@ -95,6 +99,21 @@ export const register: Register = (on, options) => {
     return best?.[0]
   }
 
+  // The lowest row on screen and which of its rows is at the top of the screen: the
+  // rows from the top one down to it, one after another, each as tall as it is.
+  function bottomRow(top: string): { id: string; lift: number } {
+    const from = shown.get(top)
+    if (from === undefined) return { id: top, lift: 0 }
+    const below = [...shown].filter(([, row]) => row.order >= from.order).sort((a, b) => a[1].order - b[1].order)
+    let at = -from.first
+    let last: [string, Shown] = [top, from]
+    for (const entry of below.slice(1)) {
+      at += last[1].of
+      last = entry
+    }
+    return { id: last[0], lift: -at }
+  }
+
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'neko',
@@ -102,7 +121,7 @@ export const register: Register = (on, options) => {
     })
     if (place === 'ceiling') {
       $.clock.every(TICK_MS, async () => {
-        if ((await read($, topRowAtom)) !== (anchor ?? '')) await update($, topRowAtom, () => anchor ?? '')
+        if ((await read($, topRowAtom)) !== (painter ?? '')) await update($, topRowAtom, () => painter ?? '')
         const top = anchor === undefined ? undefined : shown.get(anchor)
         if (top === undefined || room.columns === 0 || (await read($, isHidden))) return
         const word =
@@ -241,15 +260,17 @@ export const register: Register = (on, options) => {
       shown.delete(id)
     } else {
       const reply = e.component === 'AssistantMessage' ? e.props.text : undefined
-      shown.set(id, { order: was?.order ?? order++, first: onScreen.first, reply })
+      shown.set(id, { order: was?.order ?? order++, first: onScreen.first, of: onScreen.of, reply })
       // The top row moved: so did the conversation, by as many rows.
       if (id === anchor && was !== undefined) scrolled += onScreen.first - was.first
     }
     anchor = topRow()
+    if (anchor === undefined) painter = undefined
+    else ({ id: painter, lift } = bottomRow(anchor))
     // Before the clock first says which row it is, the one on top now.
     const drawnFrom = await read($, topRowAtom)
     if (drawnFrom !== id && drawnFrom !== '') return next(e)
-    if (anchor !== id || onScreen === null || onScreen === undefined) return next(e)
+    if (painter !== id || onScreen === null || onScreen === undefined) return next(e)
     if (await read($, isHidden)) return next(e)
 
     await read($, frame)
@@ -273,7 +294,7 @@ export const register: Register = (on, options) => {
     return (
       <Box flexDirection="column">
         {own}
-        <Box position="absolute" top={onScreen.first + ceiling.y} left={ceiling.x} flexDirection="column">
+        <Box position="absolute" top={lift + ceiling.y} left={ceiling.x} flexDirection="column">
           {rows.map(cells => (
             <Box flexDirection="row" height={1}>
               {cells.map(cell =>
@@ -289,7 +310,7 @@ export const register: Register = (on, options) => {
           ))}
         </Box>
         {toy !== null && (
-          <Box position="absolute" top={onScreen.first + Math.round(toy.y)} left={Math.round(toy.x)}>
+          <Box position="absolute" top={lift + Math.round(toy.y)} left={Math.round(toy.x)}>
             <Text color={TOY_COLOR} bold>
               {toy.word}
             </Text>
